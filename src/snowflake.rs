@@ -13,7 +13,7 @@ pub struct Snowflake {
 impl Default for Snowflake {
     fn default() -> Snowflake {
         Snowflake {
-            epoch: 0,
+            epoch: 1_573_948_800,
             worker_id: 1,
             datacenter_id: 1,
             sequence: 0,
