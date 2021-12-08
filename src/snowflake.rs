@@ -24,7 +24,12 @@ impl Default for Snowflake {
 
 impl Snowflake {
     pub fn new(epoch: i64, worker_id: i64, datacenter_id: i64) -> Snowflake {
-        Default::default()
+        Self {
+            epoch,
+            worker_id,
+            datacenter_id,
+            ..Default::default()
+        }
     }
 
     pub fn generate(&mut self) -> i64 {
