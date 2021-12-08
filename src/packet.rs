@@ -149,7 +149,7 @@ impl Display for PacketError {
                 - Message",
                 t
             ),
-            BadContent { t } => write!(f, ""),
+            BadContent { t } => write!(f, "Malformed packet of type {:?}.", t),
         }
     }
 }
