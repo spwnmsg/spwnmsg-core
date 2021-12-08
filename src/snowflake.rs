@@ -2,6 +2,7 @@ use chrono::Utc;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct Snowflake {
     epoch: i64,
     worker_id: i64,

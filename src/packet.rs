@@ -1,14 +1,15 @@
 use crate::snowflake::Snowflake;
 use lazy_static::lazy_static;
+use parking_lot::{lock_api::Mutex, RawMutex};
 use std::{error::Error, fmt::Display, str::FromStr};
 
 pub type BasePacket = [u8; 1024];
-pub struct PacketMessageContent(pub [u8; 1003]);
+pub struct PacketMessageContent(pub [u8; 1004]);
 
 pub const PROTOCOL_VERSION: u8 = 1;
 
 lazy_static! {
-    pub static ref SNOWFLAKE: Snowflake = Default::default();
+    pub static ref SNOWFLAKE: Mutex<RawMutex, Snowflake> = Mutex::new(Default::default());
 }
 
 /// Packet layout  
@@ -18,33 +19,50 @@ lazy_static! {
 /// `2` - Opcode
 pub struct Packet {
     inner: BasePacket,
-    op: Opcode,
 }
 
 impl Packet {
     pub fn new(inner: BasePacket) -> Self {
         Packet {
             inner,
-            op: inner[1].into(),
         }
     }
 
-    /// Get a reference to the packet's op.
-    pub fn op(&self) -> &Opcode {
-        &self.op
+    /// Get the packet's op.
+    pub fn op(&self) -> Opcode {
+        self.inner[1].into()
+    }
+
+    /// Get the packet's version.
+    pub fn version(&self) -> u8 {
+        self.inner[0]
+    }
+
+    /// Get a packet snowflake starting at a given index.
+    pub fn snowflake(&self, start: usize) -> [u8; 8] {
+        self.inner[start..start+8].try_into().unwrap()
     }
 
     /// Set the packet's op.
     pub fn set_op(&mut self, op: Opcode) {
-        self.op = op;
+        self.inner[1] = op as u8;
+    }
+
+    /// Set the packet's version.
+    pub fn set_version(&mut self, version: u8) {
+        self.inner[0] = version;
+    }
+
+    pub fn set_snowflake(&mut self, sf: [u8; 8], start_offset: usize) {    
+        self.inner[start_offset..start_offset + 8].copy_from_slice(&sf);
     }
 
     /// Set the packet's content depending on the opcode.
     pub fn set_content(&mut self, content: PacketMessageContent) -> Result<(), PacketError> {
-        match self.op {
+        match self.inner[1].into() {
             Opcode::Message => {
                 let n = &self.inner[..20];
-                let out: BasePacket = [n, &content.0].concat().try_into().unwrap();
+                self.inner = [n, &content.0].concat().try_into().unwrap();
 
                 Ok(())
             }
@@ -146,13 +164,13 @@ impl FromStr for PacketMessageContent {
         // let out: BasePacket = [n, &content.0].concat().try_into().unwrap();
 
         let b = s.as_bytes();
-        if b.len() > 1003 {
+        if b.len() > 1004 {
             return Err(PacketError::BadContent { t: Opcode::Message });
         }
-        let re = [0u8].repeat(1003 - b.len());
+        let re = [0u8].repeat(1004 - b.len());
         let uuw = re.as_slice();
 
-        let uw: [u8; 1003] = [b, uuw].concat().try_into().unwrap();
+        let uw: [u8; 1004] = [b, uuw].concat().try_into().unwrap();
 
         Ok(PacketMessageContent(uw))
     }
@@ -160,6 +178,8 @@ impl FromStr for PacketMessageContent {
 
 #[cfg(test)]
 pub mod test {
+    use std::time::Duration;
+
     use super::*;
 
     #[test]
@@ -167,6 +187,25 @@ pub mod test {
         let mut packet = Packet::new([0; 1024]);
 
         packet.set_op(Opcode::Message);
-        packet.set_content("uuw".parse().unwrap()).unwrap();
+        packet.set_content("uwu".parse().unwrap()).unwrap();
+        packet.set_snowflake(SNOWFLAKE.lock().generate_u8_u64(), 3);
+        println!("{:?}", SNOWFLAKE.lock());
+        std::thread::sleep(Duration::from_secs(1));
+
+        packet.set_snowflake(SNOWFLAKE.lock().generate_u8_u64(), 11);
+        println!("{:?}", SNOWFLAKE.lock());
+        std::thread::sleep(Duration::from_secs(1));
+
+        packet.set_snowflake(SNOWFLAKE.lock().generate_u8_u64(), 30);
+        println!("{:?}", SNOWFLAKE.lock());
+        std::thread::sleep(Duration::from_secs(1));
+
+        assert_eq!(packet.inner[0], 0);
+        assert_eq!(packet.inner[1], 4);
+        assert_eq!(&packet.inner[20..23], "uwu".as_bytes());
+        
+        println!("{:?}", u64::from_le_bytes(packet.snowflake(3)));
+        println!("{:?}", u64::from_le_bytes(packet.snowflake(11)));
+        println!("{:?}", u64::from_le_bytes(packet.snowflake(30)));
     }
 }
