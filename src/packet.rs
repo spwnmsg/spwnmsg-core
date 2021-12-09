@@ -185,7 +185,7 @@ impl FromStr for PacketMessageContent {
 #[cfg(test)]
 pub mod test {
     use std::time::Duration;
-
+    
     use super::*;
 
     #[test]
