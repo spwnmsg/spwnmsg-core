@@ -2,6 +2,8 @@
 name = "spwnmsg-core"
 version = "0.1.0"
 edition = "2021"
+description = "Core types for spwnmsg, a messaging client currently in the works"
+license = "BSD-3-Clause"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
