@@ -1,6 +1,6 @@
 [package]
 name = "spwnmsg-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Core types for spwnmsg, a messaging client currently in the works"
 license = "BSD-3-Clause"
