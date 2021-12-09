@@ -71,6 +71,12 @@ impl Packet {
     }
 }
 
+impl Into<[u8; 1024]> for Packet {
+    fn into(self) -> [u8; 1024] {
+        self.inner
+    }
+}
+
 impl From<u8> for Opcode {
     fn from(op: u8) -> Self {
         use self::Opcode::*;
@@ -189,15 +195,12 @@ pub mod test {
         packet.set_op(Opcode::Message);
         packet.set_content("uwu".parse().unwrap()).unwrap();
         packet.set_snowflake(SNOWFLAKE.lock().generate_u8_u64(), 3);
-        println!("{:?}", SNOWFLAKE.lock());
         std::thread::sleep(Duration::from_secs(1));
 
         packet.set_snowflake(SNOWFLAKE.lock().generate_u8_u64(), 11);
-        println!("{:?}", SNOWFLAKE.lock());
         std::thread::sleep(Duration::from_secs(1));
 
         packet.set_snowflake(SNOWFLAKE.lock().generate_u8_u64(), 30);
-        println!("{:?}", SNOWFLAKE.lock());
         std::thread::sleep(Duration::from_secs(1));
 
         assert_eq!(packet.inner[0], 0);
